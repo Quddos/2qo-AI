@@ -3,6 +3,8 @@
 // Wi-Fi or hotspot can talk with NO internet and NO server. Connected peers also
 // relay envelopes for each other, forming a small mesh.
 const CHUNK = 15000;
+const MAX_HOPS = 4;
+const HEARTBEAT = 25000;
 
 async function pack(obj) {
   const json = JSON.stringify(obj);
@@ -44,7 +46,14 @@ function waitIce(pc) {
 
 export function createP2P({ onEnvelope, onAnnounce, onStatus }) {
   const links = new Map(); // linkId -> { pc, dc, peerId, name }
+  const relayed = new Map(); // profileId -> last relay time
+  const known = new Map(); // profileId -> { profile, hops, at } — who is reachable through the mesh
   let me = null;
+  // heartbeat keeps mesh presence fresh and lets newly linked phones learn about everyone
+  setInterval(() => {
+    if (!me) return;
+    for (const l of links.values()) if (l.dc?.readyState === 'open') sendRaw(l.dc, { t: 'announce', profile: me, hops: 0 });
+  }, HEARTBEAT);
 
   function emit() {
     onStatus?.(
@@ -56,13 +65,21 @@ export function createP2P({ onEnvelope, onAnnounce, onStatus }) {
     link.dc = dc;
     const parts = new Map();
     dc.onopen = () => {
-      dc.send(JSON.stringify({ t: 'announce', profile: me }));
+      sendRaw(dc, { t: 'announce', profile: me, hops: 0 });
+      // introduce the new phone to everyone we already know (fresh in the last 2 minutes)
+      for (const k of known.values()) if (Date.now() - k.at < 120000 && k.hops + 1 <= MAX_HOPS) sendRaw(dc, { t: 'announce', profile: k.profile, hops: k.hops + 1 });
       emit();
     };
     dc.onclose = () => {
       links.delete(link.id);
       emit();
     };
+    link.pc.addEventListener('connectionstatechange', () => {
+      if (['failed', 'closed'].includes(link.pc.connectionState)) {
+        links.delete(link.id);
+        emit();
+      }
+    });
     dc.onmessage = (e) => {
       let d = JSON.parse(e.data);
       if (d.t === 'c') {
@@ -74,10 +91,22 @@ export function createP2P({ onEnvelope, onAnnounce, onStatus }) {
         d = JSON.parse(arr.join(''));
       }
       if (d.t === 'announce') {
-        link.peerId = d.profile.id;
-        link.name = d.profile.name;
-        onAnnounce(d.profile, 'p2p');
-        emit();
+        const hops = d.hops || 0;
+        if (hops === 0) {
+          link.peerId = d.profile.id;
+          link.name = d.profile.name;
+          emit();
+        }
+        if (d.profile?.id === me?.id) return;
+        known.set(d.profile.id, { profile: d.profile, hops, at: Date.now() });
+        onAnnounce(d.profile, hops === 0 ? 'p2p' : 'mesh');
+        // mesh discovery: tell our other links about this phone, so pairing with ONE phone
+        // joins you to everyone it's linked to (bounded hops, rate-limited per profile)
+        const last = relayed.get(d.profile.id) || 0;
+        if (hops < MAX_HOPS && Date.now() - last > 10000) {
+          relayed.set(d.profile.id, Date.now());
+          for (const l of links.values()) if (l !== link && l.dc?.readyState === 'open') sendRaw(l.dc, { t: 'announce', profile: d.profile, hops: hops + 1 });
+        }
       } else if (d.t === 'env') onEnvelope(d.env, 'p2p', link.id);
     };
   }

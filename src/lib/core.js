@@ -154,14 +154,20 @@ async function startNetwork() {
       if (h === 'connected') flushOutbox();
     },
     onPresence: (id, online, lastSeen) =>
-      setState((st) => ({ presence: { ...st.presence, [id]: { online, lastSeen } } })),
+      setState((st) => ({ presence: { ...st.presence, [id]: { online, lastSeen: lastSeen || Date.now(), via: 'hub' } } })),
   });
   hub.start(pub, hubUrl());
   detectHub();
   p2p = createP2P({
     ...handlers,
     onStatus: (peers) => {
-      setState((st) => ({ net: { ...st.net, peers } }));
+      const prev = getState().net.peers.map((p) => p.id);
+      const now = new Set(peers.map((p) => p.id));
+      setState((st) => {
+        const presence = { ...st.presence };
+        for (const id of prev) if (id && !now.has(id) && presence[id]?.via === 'p2p') presence[id] = { ...presence[id], online: false };
+        return { net: { ...st.net, peers }, presence };
+      });
       flushOutbox();
     },
   });
@@ -202,8 +208,10 @@ async function onAnnounce(profile, via) {
     seenAt: Date.now(),
   };
   await saveContact(c);
-  setState((st) => ({ presence: { ...st.presence, [c.id]: { online: true, lastSeen: profile.lastSeen || Date.now() } } }));
-  if (via === 'bus' || via === 'p2p') flushOutbox();
+  // a live transport (tab bus, direct link, mesh, hub) just heard from them: they're reachable now
+  const live = ['bus', 'p2p', 'mesh', 'hub'].includes(via);
+  setState((st) => ({ presence: { ...st.presence, [c.id]: live ? { online: true, lastSeen: Date.now(), via } : { ...(st.presence[c.id] || {}), lastSeen: st.presence[c.id]?.lastSeen || profile.lastSeen } } }));
+  if (via === 'bus' || via === 'p2p' || via === 'mesh') flushOutbox();
 }
 
 export async function saveContact(c) {
@@ -688,7 +696,7 @@ async function onEnvelope(env, via, linkId) {
   } else if (payload.p && (payload.p.name !== contact.name || payload.p.postcode !== contact.postcode)) {
     contact = await saveContact({ ...contact, name: payload.p.name, postcode: payload.p.postcode });
   }
-  setState((x) => ({ presence: { ...x.presence, [from]: { online: true, lastSeen: Date.now() } } }));
+  setState((x) => ({ presence: { ...x.presence, [from]: { online: true, lastSeen: Date.now(), via: via === 'p2p' && !getState().net.peers.some((p) => p.id === from) ? 'mesh' : via } } }));
   if (!NO_RCPT.has(payload.k) && !payload.k.startsWith('call-')) send(from, { k: 'rcpt', env: env.id });
   try {
     await handle(from, payload, env);
@@ -912,4 +920,20 @@ export async function addLocalMessage(chatId, partial) {
 
 export async function updateLocalMessage(msg) {
   await storeMessage(msg, { bump: false });
+}
+
+/**
+ * How (if at all) a contact can be reached right now without internet or with it.
+ * Returns { ok, via: 'direct link' | 'nearby phones' | 'hub' | 'this device' | null }
+ */
+export function reachability(id) {
+  const st = getState();
+  if (st.net.peers.some((p) => p.id === id)) return { ok: true, via: 'direct link' };
+  const p = st.presence[id];
+  const fresh = p?.online && Date.now() - (p.lastSeen || 0) < 90000;
+  if (fresh && p.via === 'mesh') return { ok: true, via: 'nearby phones' };
+  if (fresh && p.via === 'bus') return { ok: true, via: 'this device' };
+  if (st.net.hub === 'connected' && p?.online) return { ok: true, via: 'hub' };
+  if (fresh) return { ok: true, via: p.via || 'link' };
+  return { ok: false, via: null };
 }

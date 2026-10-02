@@ -272,7 +272,10 @@ export function Chat({ id, focus }) {
   const name = chat.type === 'direct' ? contact?.alias || contact?.name || chat.name : chat.name;
   let sub = '';
   if (isTyping) sub = chat.type === 'direct' ? 'typing…' : `${core.displayName(typing.from)} is typing…`;
-  else if (chat.type === 'direct') sub = lastSeen(presence) || (contact?.postcode ? pcDisplay(contact.postcode) : 'tap for info');
+  else if (chat.type === 'direct') {
+    const reach = core.reachability(id);
+    sub = reach.ok ? (lastSeen(presence) === 'online' ? `online · via ${reach.via}` : lastSeen(presence) || `reachable via ${reach.via}`) : `${lastSeen(presence) ? lastSeen(presence) + ' · ' : ''}not linked now — messages will wait`;
+  }
   else if (chat.type === 'group') sub = (chat.members || []).map((m) => core.displayName(m).split(' ')[0]).join(', ');
   else if (chat.type === 'broadcast') sub = `${(chat.members || []).length - 1} recipients`;
   else if (chat.type === 'channel') sub = chat.owner === me.id ? `${(chat.followers || []).length} followers` : 'Channel';

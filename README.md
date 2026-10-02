@@ -34,7 +34,8 @@ Optional hub environment variables:
 | Chats | 1:1, groups (admins, only-admins-send, add/remove, leave), broadcast lists, communities with announcement groups, channels (follow by QR), notes-to-self |
 | Messages | text, emoji, photos, video, documents, voice notes, location (with postcode), contact cards, polls; reply, react, forward, star, edit (15 min), delete for me/everyone, message info, disappearing messages, typing, ✓/✓✓/read ticks |
 | Moments | 24 h text/photo/video statuses, viewers list, replies, privacy (contacts / except / only) |
-| Calls | WebRTC voice & video (mute, camera, flip); signalling is encrypted, works on LAN without internet |
+| Calls | WebRTC voice & video (mute, camera, flip) phone-to-phone; signalling is encrypted; works on a shared Wi-Fi/hotspot with **no data**; brief Wi-Fi drops get 10 s to recover |
+| Play my song | during any call, tap 🎵 and pick songs from your phone — they're mixed with your voice so **both of you hear the same music live** and can keep talking; queue, seek, pause, volume; the other person sees what's playing |
 | Privacy | E2E encryption (ECDH P-256 + AES-GCM), safety numbers, chat lock PIN, block, last-seen & read-receipt controls, no phone number |
 | Settings | themes/accents/font size/wallpapers, notifications, backup export/restore |
 | Nearby | people near your postcode (same area → district → LGA → state), police/hospital/fire/pharmacy near you |
@@ -46,7 +47,8 @@ Optional hub environment variables:
 All data lives in IndexedDB on the device, and the service worker caches the whole app. Messages travel over whichever of these links is available:
 
 1. **Same device:** tabs talk over BroadcastChannel (useful for testing).
-2. **Direct phone-to-phone:** a WebRTC data channel, paired by QR code. It needs no server and no internet, only the same Wi-Fi or hotspot. Linked phones also relay messages for each other.
+2. **Direct phone-to-phone:** a WebRTC data channel, paired by QR code. It needs no server and no internet, only the same Wi-Fi or hotspot.
+   - **Mesh:** linked phones introduce each other and relay encrypted messages (up to 4 hops), so pairing with one phone reaches everyone it's linked to. Relay phones can't read what they carry.
 3. **2qo Hub on a LAN:** relay, store-and-forward for offline users, and a postcode-aware directory.
 4. **Online:** the same hub, run on a public server.
 
@@ -59,6 +61,12 @@ The AI runs on the device:
 
 Speech uses the platform recognizer. Chrome supports on-device speech packs, and text-to-speech voices are local.
 
+## No data at all: what to expect
+
+- **Pairing:** a browser can't discover nearby phones on its own. Pair once per session by QR code (Connect › Link phones), or run a 2qo Hub on the hotspot.
+- **What works after pairing, with no data and no internet:** chat, voice and video calls, shared music, Moments and SOS alerts to contacts.
+- **What the app shows:** the Calls tab lists who you can reach right now and how. Chat headers say when someone isn't linked, and their messages wait in the outbox until they are.
+
 ## Tests
 
 ```bash
@@ -66,6 +74,8 @@ npm test                                      # unit: postcode parser, intent pa
 npm run build && npx vite preview --port 4173 &
 npm run test:e2e                              # 2 users: chat, receipts, reactions, AI actions, groups, moments, SOS, all screens, offline boot
 npm run hub & npm run test:hub                # hub directory, store-and-forward, P2P link with hub switched off
+npm run test:offline                          # pair → network OFF → chat; LAN-only voice call + shared song (verifies the listener hears it)
+npm run test:mesh                             # A↔B↔C: A finds and messages C through B
 ```
 
 For the Nigerian postcode research and the roadmap, see [docs/POSTCODE.md](docs/POSTCODE.md).

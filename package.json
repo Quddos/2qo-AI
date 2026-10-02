@@ -13,7 +13,9 @@
     "test:e2e": "node test/e2e/two-users.mjs",
     "test:hub": "node test/e2e/hub-p2p.mjs",
     "icons": "node scripts/icons.mjs",
-    "hub:https": "HTTPS=1 node server/hub.js"
+    "hub:https": "HTTPS=1 node server/hub.js",
+    "test:offline": "node test/e2e/offline-call-music.mjs",
+    "test:mesh": "node test/e2e/mesh.mjs"
   },
   "license": "MIT",
   "dependencies": {
