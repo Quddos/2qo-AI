@@ -1,0 +1,26 @@
+// Official *test* postcodes listed in the docs (docs.postcode.gov.ng → Lookup levels → Test postcodes),
+// as mirrored by the community Go SDK github.com/abcubed3/postcode. Used only as offline examples
+// and for exercising the UI without an API key — not as a source of real addresses.
+export const TEST_POSTCODES = [
+  { code: 'EK-01-A03-FK-01', state: 'Ekiti', address: 'NTA Road, Back of Fabian Hotel, Ado Ekiti' },
+  { code: 'AK-11-I61-ZF-12', state: 'Akwa Ibom', address: '12 Oron Road, Uyo' },
+  { code: 'AK-11-H40-WD-11', state: 'Akwa Ibom', address: '11 Wellington Bassey Way, Uyo' },
+  { code: 'BA-02-M67-BL-69', state: 'Bauchi', address: '69 Bank Road, GRA, Bauchi' },
+  { code: 'BA-02-E99-NE-30', state: 'Bauchi', address: '30 Ahmadu Bello Way, Bauchi' },
+  { code: 'EB-13-G95-FR-90', state: 'Ebonyi', address: '90 Ogoja Road, Abakaliki' },
+  { code: 'EB-13-I97-AB-30', state: 'Ebonyi', address: '30 Water Works Road, Abakaliki' },
+  { code: 'EN-05-V19-CD-22', state: 'Enugu', address: '22 Chime Avenue, New Haven, Enugu' },
+  { code: 'EN-05-V19-FT-20', state: 'Enugu', address: '20 Ogui Road, Enugu' },
+  { code: 'FC-03-B06-AG-12', state: 'FCT', address: '12 Shehu Shagari Way, Garki, Abuja' },
+  { code: 'FC-02-B19-RT-30', state: 'FCT', address: '30 Gado Nasko Way, Phase 4, Kubwa, Abuja' },
+  { code: 'JI-24-O18-JP-23', state: 'Jigawa', address: '23 Sani Abacha Way, Dutse' },
+  { code: 'JI-24-N11-VM-58', state: 'Jigawa', address: '58 Kano-Dutse Expressway, Dutse' },
+  { code: 'KN-31-F82-WJ-80', state: 'Kano', address: '80 Badu Road, Bompai, Kano' },
+  { code: 'KN-31-D78-IQ-38', state: 'Kano', address: '38 Ibrahim Taiwo Road, Kano' },
+  { code: 'LA-11-W06-TC-10', state: 'Lagos', address: '10 Obafemi Awolowo Way, Ikeja, Lagos' },
+  { code: 'LA-11-U34-ZR-63', state: 'Lagos', address: '63 Isaac John Street, GRA Ikeja, Lagos' },
+  { code: 'NI-09-J67-QC-65', state: 'Niger', address: '65 Bosso Road, Minna' },
+  { code: 'NI-09-A75-DA-10', state: 'Niger', address: '10 Paida Road, Minna' },
+  { code: 'OG-14-T18-BN-16', state: 'Ogun', address: '16 Lalubu Street, Oke-Ilewo, Abeokuta' },
+  { code: 'OG-14-M82-QA-09', state: 'Ogun', address: '9 Quarry Road, Abeokuta' },
+];
